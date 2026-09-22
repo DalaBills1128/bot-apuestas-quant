@@ -66,53 +66,79 @@ def ejecutar_orquestador_real():
     
     if partidos_evaluar:
         for partido in partidos_evaluar:
-            match_id = f"{partido['local']}_vs_{partido['visitante']}"
+            match_id_base = f"{partido['local']}_vs_{partido['visitante']}"
             
-            if match_id in alertas_previas:
-                continue
-
             try:
-                if partido['cuota_local'] == 0 or partido['cuota_visitante'] == 0:
-                    continue
-
+                # Predecir probabilidades con Dixon-Coles
                 preds = modelo.predecir_partido(partido['local'], partido['visitante'])
-                analisis = riesgo.analizar_apuesta(preds['prob_local'], partido['cuota_local'])
-                
-                if analisis['apuesta_recomendada']:
-                    apuestas_encontradas += 1
-                    liga = partido.get('liga_nombre', 'Oportunidades Destacadas') # Agrupa por liga
-                    
-                    if liga not in apuestas_por_liga:
-                        apuestas_por_liga[liga] = []
-                    
-                    edge_porcentaje = analisis['edge'] * 100
-                    stake_porcentaje = analisis['porcentaje_bankroll'] * 100
-                    
-                    # Construir la línea del partido con el formato exacto que te gusta
-                    prob_real_porcentaje = preds['prob_local'] * 100
-                    edge_porcentaje = analisis['edge'] * 100
-                    stake_porcentaje = analisis['porcentaje_bankroll'] * 100
 
-                    # Plantilla exacta basada en tu nueva imagen de referencia
-                    detalle_partido = (
-                        f"⚽ *{partido['local']} vs {partido['visitante']}*\n"
-                        f"📈 Apuesta: Gana {partido['local']}\n"
-                        f"📊 Probabilidad Real: {prob_real_porcentaje:.2f}%\n"
-                        f"🏛️ Cuota Real Mercado: {partido['cuota_local']}\n"
-                        f"🔥 Edge (Ventaja): {edge_porcentaje:.2f}%\n"
-                        f"💰 Stake: {stake_porcentaje:.2f}% del Bankroll (${analisis['monto_fiat']} COP)\n"
-                        f"───────────────"
-                    )
+                # Definir los tres mercados posibles (Local, Empate, Visitante)
+                mercados_a_evaluar = [
+                    {
+                        "tipo": "Local",
+                        "nombre_apuesta": f"Gana {partido['local']}",
+                        "prob": preds['prob_local'],
+                        "cuota": partido.get('cuota_local', 0.0),
+                        "id_mercado": f"{match_id_base}_LOCAL"
+                    },
+                    {
+                        "tipo": "Empate",
+                        "nombre_apuesta": "Empate",
+                        "prob": preds['prob_empate'],
+                        "cuota": partido.get('cuota_empate', 0.0),
+                        "id_mercado": f"{match_id_base}_EMPATE"
+                    },
+                    {
+                        "tipo": "Visitante",
+                        "nombre_apuesta": f"Gana {partido['visitante']}",
+                        "prob": preds['prob_visitante'],
+                        "cuota": partido.get('cuota_visitante', 0.0),
+                        "id_mercado": f"{match_id_base}_VISITANTE"
+                    }
+                ]
+
+                for mercado in mercados_a_evaluar:
+                    # Evitar duplicados usando la memoria específica del mercado/partido
+                    if mercado['id_mercado'] in alertas_previas:
+                        continue
+
+                    if mercado['cuota'] <= 0:
+                        continue
+
+                    analisis = riesgo.analizar_apuesta(mercado['prob'], mercado['cuota'])
+
+                    if analisis['apuesta_recomendada']:
+                        apuestas_encontradas += 1
+                        liga = partido.get('liga_nombre', 'Oportunidades Destacadas')
+                        
+                        if liga not in apuestas_por_liga:
+                            apuestas_por_liga[liga] = []
+                        
+                        prob_real_porcentaje = mercado['prob'] * 100
+                        edge_porcentaje = analisis['edge'] * 100
+                        stake_porcentaje = analisis['porcentaje_bankroll'] * 100
+
+                        # Plantilla detallada con el mercado evaluado
+                        detalle_partido = (
+                            f"⚽ *{partido['local']} vs {partido['visitante']}*\n"
+                            f"📈 Apuesta: {mercado['nombre_apuesta']}\n"
+                            f"🏛️ Casa de Apuestas: *{partido['casa']}*\n"
+                            f"📊 Probabilidad Real: {prob_real_porcentaje:.2f}%\n"
+                            f"🏛️ Cuota Real Mercado: {mercado['cuota']}\n"
+                            f"🔥 Edge (Ventaja): {edge_porcentaje:.2f}%\n"
+                            f"💰 Stake: {stake_porcentaje:.2f}% del Bankroll (${analisis['monto_fiat']} COP)\n"
+                            f"───────────────"
+                        )
+                        
+                        apuestas_por_liga[liga].append(detalle_partido)
+                        
+                        # Registrar en memoria para no repetirlo
+                        registrar_alerta(mercado['id_mercado'])
+                    else:
+                        print(f"➖ {partido['local']} vs {partido['visitante']} ({mercado['tipo']}): Sin valor suficiente ({analisis['motivo']})")
                     
-                    apuestas_por_liga[liga].append(detalle_partido)
-                    
-                    # Registrar en memoria para no repetirlo
-                    if 'registrar_alerta' in globals():
-                        registrar_alerta(match_id)
-                else:
-                    print(f"➖ {partido['local']} vs {partido['visitante']}: Sin valor suficiente ({analisis['motivo']})")
-                    
-            except Exception:
+            except Exception as e:
+                print(f"⚠️ Error procesando {partido.get('local')} vs {partido.get('visitante')}: {e}")
                 continue
 
     # Enviar mensajes agrupados por liga
@@ -120,7 +146,7 @@ def ejecutar_orquestador_real():
         for liga, mensajes_partidos in apuestas_por_liga.items():
             mensaje_liga = f"🏆 *Oportunidades en ➔ {liga}* 🏆\n\n" + "\n".join(mensajes_partidos)
             telegram.enviar_alerta(mensaje_liga)
-            time.sleep(2) # Pequeña pausa de seguridad entre mensajes de distintas ligas
+            time.sleep(2) # Pausa de seguridad entre mensajes de distintas ligas
 
     print(f"🏁 Análisis completado. Nuevas alertas enviadas: {apuestas_encontradas}")
 
