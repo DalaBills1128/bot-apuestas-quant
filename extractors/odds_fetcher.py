@@ -5,27 +5,19 @@ from config import Config
 class OddsFetcher:
     def __init__(self):
         self.api_key = Config.ODDS_API_KEY
-        # Ligas activas y compatibles con The Odds API (incluyendo Sudamérica y Europa)
-        self.ligas_activas = [
-            "soccer_epl",
-            "soccer_spain_la_liga",
-            "soccer_italy_serie_a",
-            "soccer_germany_bundesliga",
-            "soccer_conmebol_copa_libertadores",
-            "soccer_conmebol_copa_sudamericana",
-            "soccer_argentina_primera_division",
-            "soccer_brazil_campeonato"
-        ]
+        # 🎯 1. Conectamos dinámicamente a la lista que creaste en config.py
+        self.ligas_activas = getattr(Config, 'ODDS_API_LEAGUES')
 
     def obtener_cuotas_actuales(self):
         partidos_procesados = []
-        limite_tiempo = datetime.now(timezone.utc) + timedelta(days=20)
+        # ⏱️ 2. OPTIMIZACIÓN: Rango estricto de 24 horas para ahorrar créditos y memoria
+        limite_tiempo = datetime.now(timezone.utc) + timedelta(days=2)
 
         for sport_key in self.ligas_activas:
             url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/"
             params = {
                 "api_key": self.api_key,
-                "regions": "eu",
+                "regions": "eu,uk,us",
                 "markets": "h2h",
                 "oddsFormat": "decimal"
             }
@@ -34,8 +26,11 @@ class OddsFetcher:
             
             try:
                 response = requests.get(url, params=params)
+                
+                # 🕵️ MODO ESPÍA API: Si hay un bloqueo, que lo grite en la terminal
                 if response.status_code != 200:
-                    continue # Omitir ligas que no tengan jornada activa hoy
+                    print(f"⚠️ Bloqueo en '{sport_key}': Error {response.status_code} -> {response.text}")
+                    continue 
 
                 eventos = response.json()
 
@@ -43,6 +38,7 @@ class OddsFetcher:
                     fecha_str = evento.get("commence_time")
                     fecha_partido = datetime.strptime(fecha_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
                     
+                    # Filtro de francotirador temporal: descartar partidos del futuro
                     if fecha_partido > limite_tiempo:
                         continue 
 
@@ -72,5 +68,5 @@ class OddsFetcher:
             except Exception as e:
                 print(f"❌ Error en The Odds API para {sport_key}: {e}")
 
-        print(f"✅ Se evaluarán {len(partidos_procesados)} partidos programados para HOY en las ligas configuradas.")
+        print(f"✅ Se evaluarán {len(partidos_procesados)} partidos programados para las próximas 48H.")
         return partidos_procesados

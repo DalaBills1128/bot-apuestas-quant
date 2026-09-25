@@ -4,31 +4,47 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # APIs
+    # APIs y Bases de datos
     API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY")
-    RAPID_API_HOST = os.getenv("RAPID_API_HOST", "free-api-live-football-data.p.rapidapi.com")
     ODDS_API_KEY = os.getenv("ODDS_API_KEY")
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY") # Nueva llave para la IA gratuita
     
-    # Dirección de la Base de Datos en la Nube (Supabase)
     SUPABASE_URL = os.getenv("SUPABASE_URL")
     SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-    DATABASE_URL = os.getenv("DATABASE_URL")
     
-    # Telegram Bot
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-    
-    # Base de Datos Local (Respaldo)
-    DB_HOST = os.getenv("DB_HOST", "localhost")
-    DB_PORT = os.getenv("DB_PORT", "5432")
-    DB_NAME = os.getenv("DB_NAME", "bot_apuestas_db")
-    DB_USER = os.getenv("DB_USER", "postgres")
-    DB_PASSWORD = os.getenv("DB_PASSWORD")
-    
-    # Algoritmo Quant
-    BANKROLL_INICIAL = float(os.getenv("BANKROLL_INICIAL", 100000))
-    TOLERANCIA_CUOTA = float(os.getenv("TOLERANCIA_CUOTA", 0.10))
-    FRACCION_KELLY = float(os.getenv("FRACCION_KELLY", 0.25))
 
-if __name__ == "__main__":
-    print("Configuración cargada correctamente.")
+    # 🎯 FILTRO DE LIGAS (Francotirador)
+    # IDs oficiales de API-Football para descargar el historial xG
+    LIGAS_VIP = {
+        13: "Copa Libertadores",
+        11: "Copa Sudamericana",
+        39: "Premier League (Inglaterra)",
+        140: "La Liga (España)",
+        135: "Serie A (Italia)",
+        2: "Champions League"
+    }
+
+    # 🌐 FILTRO DE THE ODDS API (Para buscar cuotas en vivo hoy)
+    # Comenta las ligas que no quieras escanear hoy para ahorrar créditos
+    ODDS_API_LEAGUES = [
+        "soccer_epl",                       # Inglaterra
+        "soccer_spain_la_liga",             # España
+        "soccer_italy_serie_a",             # Italia
+        "soccer_conmebol_copa_libertadores",# Libertadores
+        "soccer_conmebol_copa_sudamericana",# Sudamericana
+        "soccer_argentina_primera_division",# Argentina
+        "soccer_brazil_campeonato"          # Brasil
+    ]
+
+    # 🏛️ MAPEO DE CASAS DE APUESTAS COLOMBIANAS
+    # Traducimos los proveedores globales a tus casas locales
+    CASAS_ESPEJO = {
+        'unibet': ['Rushbet', 'BetPlay'], # Unibet usa Kambi, igual que Rushbet y BetPlay
+        'betsson': ['Betsson'],           # Betsson es global
+        'williamhill': ['Wplay']          # Espejo aproximado para cuotas de Wplay
+    }
+
+    # Umbral de rentabilidad mínimo para enviar alerta
+    MIN_EDGE_PERCENTAGE = 10.0
