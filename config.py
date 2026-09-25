@@ -43,7 +43,11 @@ class Config:
     CASAS_ESPEJO = {
         'unibet': ['Rushbet', 'BetPlay'], # Unibet usa Kambi, igual que Rushbet y BetPlay
         'betsson': ['Betsson'],           # Betsson es global
-        'williamhill': ['Wplay']          # Espejo aproximado para cuotas de Wplay
+        'williamhill': ['Wplay'],          # Espejo aproximado para cuotas de Wplay
+        '1xbet': ['1xBet']    
+        'bet365': ['Bet365'],
+        'bwin': ['Bwin'],
+        'pinnacle': ['Pinnacle']    
     }
 
     # Umbral de rentabilidad mínimo para enviar alerta
