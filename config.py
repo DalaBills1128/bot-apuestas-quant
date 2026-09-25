@@ -44,7 +44,7 @@ class Config:
         'unibet': ['Rushbet', 'BetPlay'], # Unibet usa Kambi, igual que Rushbet y BetPlay
         'betsson': ['Betsson'],           # Betsson es global
         'williamhill': ['Wplay'],          # Espejo aproximado para cuotas de Wplay
-        '1xbet': ['1xBet']    
+        '1xbet': ['1xBet'],    
         'bet365': ['Bet365'],
         'bwin': ['Bwin'],
         'pinnacle': ['Pinnacle']    
